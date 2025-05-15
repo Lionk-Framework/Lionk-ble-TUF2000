@@ -2,20 +2,28 @@
 #include <Arduino.h>
 #include <WiFi.h>
 
+// Mode debug - mettre à false pour désactiver tous les Serial.print
+#define DEBUG_MODE false
+
 typedef struct {
   uint16_t flow_rate;    // Water flow rate (divide by 100 to get actual value)
 } sensor_data_t;
 
 sensor_data_t sensor_data;
 
-// BLE service UUIDs - Using the same UUIDs as your original code to ensure compatibility
+#define PAYLOAD_VERSION 0
+#define HEADER_SIZE     2
+#define DATA_SIZE       2
+#define PAYLOAD_SIZE    HEADER_SIZE + DATA_SIZE
+
+// BLE service UUIDs
 #define UUID_FLOW_SVC           "181A"  // Environmental Sensing service (standard)
-#define UUID_DATA_SVC           "6E400001-B5A3-F393-E0A9-E50E24DCCA9E"  // Original Nordic UART Service UUID
+#define UUID_DATA_SVC           "19B10000-E8F2-537E-4F6C-D104768A1214"  // Custom flow notification service
 #define UUID_VERSION_SVC        "180A"  // Device Information service (standard)
 
 // BLE characteristic UUIDs
 #define UUID_FLOW               "2A6D"  // Standard "Flow" characteristic
-#define UUID_DATA               "6E400002-B5A3-F393-E0A9-E50E24DCCA9E"  // Original Nordic UART TX characteristic
+#define UUID_DATA               "19B10001-E8F2-537E-4F6C-D104768A1214"  // Custom flow notification characteristic
 #define UUID_VERSION            "2A28"  // Software Revision String (standard)
 
 char device_name[32];
@@ -25,7 +33,7 @@ BLEService flowService(UUID_FLOW_SVC);
 BLEUnsignedIntCharacteristic flowChar(UUID_FLOW, BLERead);
 
 BLEService dataService(UUID_DATA_SVC);
-BLECharacteristic dataChar(UUID_DATA, BLENotify, 3);  // 3 bytes: 1 reserved + 2 for flow
+BLECharacteristic dataChar(UUID_DATA, BLENotify, PAYLOAD_SIZE);  // 4 bytes: 2 reserved + 2 for flow
 
 BLEService versionService(UUID_VERSION_SVC);
 BLEStringCharacteristic versionChar(UUID_VERSION, BLERead, 20);
@@ -33,7 +41,11 @@ BLEStringCharacteristic versionChar(UUID_VERSION, BLERead, 20);
 const char* VERSION = "1.0.0";
 bool subscribed = false;
 unsigned long lastUpdateTime = 0;
-const long updateInterval = 1000;
+const long updateInterval = 10;
+
+// Macro pour les messages de debug
+#define DEBUG_PRINT(x) if(DEBUG_MODE) Serial.print(x)
+#define DEBUG_PRINTLN(x) if(DEBUG_MODE) Serial.println(x)
 
 // Generate unique device ID using MAC address
 uint64_t getDeviceId() {
@@ -48,7 +60,7 @@ uint64_t getDeviceId() {
 
 void startAdvertising() {
   BLE.advertise();
-  Serial.println("Started advertising");
+  DEBUG_PRINTLN("Started advertising");
 }
 
 void bleSetup() {
@@ -57,7 +69,7 @@ void bleSetup() {
   sprintf(device_name, "FLOW-%08llX", device_id);
   
   if (!BLE.begin()) {
-    Serial.println("BLE initialization failed!");
+    DEBUG_PRINTLN("BLE initialization failed!");
     while (1);
   }
   
@@ -82,28 +94,29 @@ void bleSetup() {
   
   startAdvertising();
   
-  Serial.println("BLE initialized");
-  Serial.print("Device ID: ");
-  Serial.println(device_id, HEX);
-  Serial.print("Device Name: ");
-  Serial.println(device_name);
+  DEBUG_PRINTLN("BLE initialized");
+  DEBUG_PRINT("Device ID: ");
+  DEBUG_PRINTLN(device_id, HEX);
+  DEBUG_PRINT("Device Name: ");
+  DEBUG_PRINTLN(device_name);
 }
 
 void onSubscribe(BLEDevice central, BLECharacteristic characteristic) {
   subscribed = true;
-  Serial.print("Notifications enabled by central: ");
-  Serial.println(central.address());
+  DEBUG_PRINT("Notifications enabled by central: ");
+  DEBUG_PRINTLN(central.address());
 }
 
 void onUnsubscribe(BLEDevice central, BLECharacteristic characteristic) {
   subscribed = false;
-  Serial.println("Notifications disabled");
+  DEBUG_PRINTLN("Notifications disabled");
 }
 
 void buildSensorDataBuffer(const sensor_data_t *data, uint8_t *buf) {
-  buf[0] = 0;  // Reserved byte
-  buf[1] = (data->flow_rate & 0xFF00) >> 8;  // Flow rate MSB
-  buf[2] = (data->flow_rate & 0xFF);         // Flow rate LSB
+  buf[0] = PAYLOAD_VERSION;  // Reserved byte
+  buf[1] = DATA_SIZE;  // Reserved byte
+  buf[2] = (data->flow_rate & 0xFF00) >> 8;  // Flow rate MSB
+  buf[3] = (data->flow_rate & 0xFF);         // Flow rate LSB
 }
 
 boolean bleSendData() {
@@ -111,16 +124,17 @@ boolean bleSendData() {
     return false;
   }
   
-  uint8_t buffer[3];  // 3 bytes: 1 reserved + 2 for flow rate
+  uint8_t buffer[PAYLOAD_SIZE];  // 4 bytes: 2 reserved + 2 for flow rate
   buildSensorDataBuffer(&sensor_data, buffer);
   
-  return dataChar.writeValue(buffer, 3);
+  return dataChar.writeValue(buffer, PAYLOAD_SIZE);
 }
 
-void updateSensorData() {
+int i = 0;
 
+void updateSensorData() {
   // TODO CJS -> Implement sensor reading.
-  double flowValue = 10;
+  double flowValue = 10 + ((i++) % 13);
   
   // Convert to uint16_t format (multiply by 100 to preserve 2 decimals)
   uint16_t scaledFlow = (uint16_t)(flowValue * 100);
@@ -129,26 +143,27 @@ void updateSensorData() {
   
   flowChar.writeValue(sensor_data.flow_rate);
   
-  Serial.print("Flow rate: ");
-  Serial.print(sensor_data.flow_rate);
-  Serial.println(" (raw value)");
-  Serial.print("Actual flow: ");
-  Serial.print(flowValue);
-  Serial.println(" L/min");
+  DEBUG_PRINT("Flow rate: ");
+  DEBUG_PRINT(sensor_data.flow_rate);
+  DEBUG_PRINTLN(" (raw value)");
+  DEBUG_PRINT("Actual flow: ");
+  DEBUG_PRINT(flowValue);
+  DEBUG_PRINTLN(" L/min");
 }
 
 void setup() {
-  Serial.begin(9600);
-  delay(1500);
+  if (DEBUG_MODE) {
+    Serial.begin(9600);
+  }
   
-  // TODO CJS -> Manage corecctly
+  // TODO CJS -> Manage correctly
   pinMode(A0, INPUT);
   
   sensor_data.flow_rate = 0;
   
   bleSetup();
   
-  Serial.println("Setup complete");
+  DEBUG_PRINTLN("Setup complete");
 }
 
 void loop() {
@@ -157,8 +172,8 @@ void loop() {
   BLEDevice central = BLE.central();
   
   if (central) {
-    Serial.print("Connected to central: ");
-    Serial.println(central.address());
+    DEBUG_PRINT("Connected to central: ");
+    DEBUG_PRINTLN(central.address());
     
     while (central.connected()) {
       currentTime = millis();
@@ -169,9 +184,9 @@ void loop() {
         
         if (subscribed) {
           if (bleSendData()) {
-            Serial.println("Data sent successfully");
+            DEBUG_PRINTLN("Data sent successfully");
           } else {
-            Serial.println("Failed to send data");
+            DEBUG_PRINTLN("Failed to send data");
           }
         }
       }
@@ -179,8 +194,8 @@ void loop() {
       delay(10);
     }
     
-    Serial.print("Disconnected from central: ");
-    Serial.println(central.address());
+    DEBUG_PRINT("Disconnected from central: ");
+    DEBUG_PRINTLN(central.address());
     
     subscribed = false;
     
