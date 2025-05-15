@@ -5,9 +5,14 @@
 #include <WiFi.h>
 
 #define DEBUG_MODE false
-#define DEBUG_PRINT(x) if(DEBUG_MODE) Serial.print(x)
-#define DEBUG_PRINTLN(x) if(DEBUG_MODE) Serial.println(x)
-inline void DEBUG_PRINTLN2(unsigned long long x, int y) { if (DEBUG_MODE) Serial.println(x, y); }
+
+#if DEBUG_MODE
+#define DEBUG_PRINT(x)	 Serial.print(x)
+#define DEBUG_PRINTLN(x) Serial.println(x)
+#else
+#define DEBUG_PRINT(x)
+#define DEBUG_PRINTLN(x)
+#endif
 
 uint64_t getDeviceId();
 

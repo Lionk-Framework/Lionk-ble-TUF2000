@@ -2,6 +2,7 @@
 #define BLE_MANAGER_H
 
 #include <ArduinoBLE.h>
+
 #include "sensor.h"
 
 void bleSetup();
