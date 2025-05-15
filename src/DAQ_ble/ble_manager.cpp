@@ -77,3 +77,19 @@ bool bleSendData()
 	buildSensorDataBuffer(&sensor_data, buffer);
 	return dataChar.writeValue(buffer, PAYLOAD_SIZE);
 }
+
+bool bleSendDataBuffer(const uint16_t *samples, int length)
+{
+	if (!subscribed)
+		return false;
+	// Build a payload: [version][count][samples...]
+	uint8_t payload[PAYLOAD_SIZE];
+	payload[0] = PAYLOAD_VERSION;
+	payload[1] = length;
+	for (int i = 0; i < length; ++i) {
+		payload[HEADER_SIZE + i * SAMPLE_SIZE] = (samples[i] >> 8) &
+							 0xFF;
+		payload[HEADER_SIZE + i * SAMPLE_SIZE + 1] = samples[i] & 0xFF;
+	}
+	return dataChar.writeValue(payload, HEADER_SIZE + length * SAMPLE_SIZE);
+}

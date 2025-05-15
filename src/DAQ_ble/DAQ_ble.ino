@@ -3,7 +3,13 @@
 #include "utils.h"
 
 unsigned long lastUpdateTime = 0;
-const long updateInterval = 10;
+const long sampleInterval = 10; // 10ms per sample
+
+uint16_t flowRateBuffer[SAMPLES_PER_PACKET];
+int bufferIndex = 0;
+
+unsigned long lastSendTime = 0;
+const long sendInterval = sampleInterval * SAMPLES_PER_PACKET; // 100ms
 
 void setup()
 {
@@ -16,34 +22,49 @@ void setup()
 	DEBUG_PRINTLN("Setup complete");
 }
 
-void loop()
+void handleCentralConnection(BLEDevice &central)
+{
+	DEBUG_PRINT("Connected to central: ");
+	DEBUG_PRINTLN(central.address());
+	while (central.connected()) {
+		handleSensorUpdate();
+		delay(10);
+	}
+	DEBUG_PRINT("Disconnected from central: ");
+	DEBUG_PRINTLN(central.address());
+	subscribed = false;
+	startAdvertising();
+}
+
+void handleSensorUpdate()
 {
 	unsigned long currentTime = millis();
-	BLEDevice central = BLE.central();
-	if (central) {
-		DEBUG_PRINT("Connected to central: ");
-		DEBUG_PRINTLN(central.address());
-		while (central.connected()) {
-			currentTime = millis();
-			if (currentTime - lastUpdateTime >= updateInterval) {
-				lastUpdateTime = currentTime;
-				updateSensorData();
-				if (subscribed) {
-					if (bleSendData()) {
-						DEBUG_PRINTLN(
-							"Data sent successfully");
-					} else {
-						DEBUG_PRINTLN(
-							"Failed to send data");
-					}
+	if (currentTime - lastUpdateTime >= sampleInterval) {
+		lastUpdateTime = currentTime;
+		updateSensorData();
+		flowRateBuffer[bufferIndex] = sensor_data.flow_rate;
+		bufferIndex++;
+		if (bufferIndex >= SAMPLES_PER_PACKET) {
+			if (subscribed) {
+				if (bleSendDataBuffer(flowRateBuffer,
+						      SAMPLES_PER_PACKET)) {
+					DEBUG_PRINTLN(
+						"Data buffer sent successfully");
+				} else {
+					DEBUG_PRINTLN(
+						"Failed to send data buffer");
 				}
 			}
-			delay(10);
+			bufferIndex = 0;
 		}
-		DEBUG_PRINT("Disconnected from central: ");
-		DEBUG_PRINTLN(central.address());
-		subscribed = false;
-		startAdvertising();
+	}
+}
+
+void loop()
+{
+	BLEDevice central = BLE.central();
+	if (central) {
+		handleCentralConnection(central);
 	}
 	delay(100); // wait on new connection
 }

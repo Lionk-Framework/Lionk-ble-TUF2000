@@ -3,11 +3,13 @@
 
 #include <stdint.h>
 
-#define PAYLOAD_VERSION 0
-#define HEADER_SIZE	2
-#define SAMPLES_SIZE	2
-#define SAMPLES_NUMBER	2
-#define PAYLOAD_SIZE	(HEADER_SIZE + SAMPLES_NUMBER)
+// --- Payload and BLE packet configuration ---
+#define PAYLOAD_VERSION	   0
+#define HEADER_SIZE	   2
+#define SAMPLE_SIZE	   2
+#define SAMPLES_PER_PACKET 10
+#define PAYLOAD_SIZE	   (HEADER_SIZE + SAMPLES_PER_PACKET * SAMPLE_SIZE)
+// -------------------------------------------
 
 typedef struct {
 	uint16_t flow_rate;
