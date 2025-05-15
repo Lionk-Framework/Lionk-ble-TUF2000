@@ -23,7 +23,7 @@ void updateSensorData()
 void buildSensorDataBuffer(const sensor_data_t *data, uint8_t *buf)
 {
 	buf[0] = PAYLOAD_VERSION;
-	buf[1] = SAMPLES_NUMBER;
+	buf[1] = SAMPLES_PER_PACKET;
 	buf[2] = static_cast<uint8_t>((data->flow_rate & 0xFF00) >> 8);
 	buf[3] = static_cast<uint8_t>(data->flow_rate & 0xFF);
 }
