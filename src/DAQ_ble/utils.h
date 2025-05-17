@@ -4,7 +4,7 @@
 #include <Arduino.h>
 #include <WiFi.h>
 
-#define DEBUG_MODE false
+#define DEBUG_MODE true
 
 #if DEBUG_MODE
 #define DEBUG_PRINT(x)	 Serial.print(x)
@@ -14,6 +14,6 @@
 #define DEBUG_PRINTLN(x)
 #endif
 
-uint64_t getDeviceId();
+String getDeviceId();
 
 #endif // UTILS_H

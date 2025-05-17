@@ -1,17 +1,25 @@
 #include <WiFi.h>
 #include <stdint.h>
+#include <string.h>
 
 #include <array>
 
 #include "utils.h"
 
-uint64_t getDeviceId()
+String getDeviceId()
 {
 	uint64_t id = 0;
 	std::array<uint8_t, 6> mac;
 	WiFi.macAddress(mac.data());
-	for (const auto &byte : mac) {
-		id = (id << 8) | byte;
-	}
-	return id;
+
+        String mac_str;
+        for (size_t i = 0; i < mac.size(); ++i) {
+            if (i != 0) {
+                mac_str += ":";
+            }
+            mac_str += String(mac[i], HEX);
+        }
+
+        DEBUG_PRINT("MAC Address: ");
+        return mac_str;
 }

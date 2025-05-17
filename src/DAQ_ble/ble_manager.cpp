@@ -1,6 +1,7 @@
 #include "ble_manager.h"
 #include "sensor.h"
 #include "utils.h"
+#include <string.h>
 
 constexpr char UUID_FLOW_SVC[] = "181A";
 constexpr char UUID_DATA_SVC[] = "19B10000-E8F2-537E-4F6C-D104768A1214";
@@ -28,8 +29,10 @@ void startAdvertising()
 
 void bleSetup()
 {
-	uint64_t device_id = getDeviceId();
-	snprintf(device_name, sizeof(device_name), "FLOW-%08llX", device_id);
+        String device_id = getDeviceId();
+        DEBUG_PRINTLN(device_id);
+        
+        snprintf(device_name, sizeof(device_name), "Lionk-Flow-%s", device_id.c_str());
 	if (!BLE.begin()) {
 		DEBUG_PRINTLN("BLE initialization failed!");
 		while (true)
