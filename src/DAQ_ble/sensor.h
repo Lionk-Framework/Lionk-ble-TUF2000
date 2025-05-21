@@ -2,6 +2,7 @@
 #define SENSOR_H
 
 #include <stdint.h>
+#include "modbus_manager.h"
 
 // --- Payload and BLE packet configuration ---
 #define PAYLOAD_VERSION	   0

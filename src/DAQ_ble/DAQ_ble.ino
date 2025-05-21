@@ -19,6 +19,7 @@ void setup()
 	pinMode(A0, INPUT); // TODO: Manage correctly
 	sensor_data.flow_rate = 0;
 	bleSetup();
+	modbusSetup();
 	DEBUG_PRINTLN("Setup complete");
 }
 
