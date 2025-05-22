@@ -3,19 +3,19 @@
 #include "utils.h"
 #include <string.h>
 
-// Custom services using Lionk's base UUID: 8EC9XXXX-F315-4F60-9FB8-838830549FD2
+// Custom services using Lionk's base UUID: 8EC9XXXX-E8F2-537E-4F6C-D104768A1214
 constexpr char UUID_PIPE_DIAMETER_SVC[] = "19B10030-E8F2-537E-4F6C-D104768A1214";  // Pipe diameter service
 constexpr char UUID_YEARLY_FLOW_SVC[] = "19B10020-E8F2-537E-4F6C-D104768A1214";    // Yearly flow service
-constexpr char UUID_FLOW_SVC[] = "19B10000-F315-4F60-9FB8-838830549FD2";           // Flow history data service
+constexpr char UUID_FLOW_SVC[] = "19B10000-E8F2-537E-4F6C-D104768A1214";           // Flow history data service
 constexpr char UUID_VELOCITY_DATA_SVC[] = "19B10010-E8F2-537E-4F6C-D104768A1214";  // Velocity history data service
-constexpr char UUID_VERSION_SVC[] = "19B10040-F315-4F60-9FB8-838830549FD2";  // Standard Device Information Service
+constexpr char UUID_VERSION_SVC[] = "19B10040-E8F2-537E-4F6C-D104768A1214";  // Standard Device Information Service
 
 // Custom characteristics
 constexpr char UUID_PIPE_DIAMETER[] = "19B10031-E8F2-537E-4F6C-D104768A1214";     // Pipe diameter characteristic 
 constexpr char UUID_YEARLY_FLOW[] = "19B10021-E8F2-537E-4F6C-D104768A1214";       // Yearly flow characteristic
-constexpr char UUID_FLOW_DATA[] = "19B10001-F315-4F60-9FB8-838830549FD2";              // Flow history data characteristic
+constexpr char UUID_FLOW_DATA[] = "19B10001-E8F2-537E-4F6C-D104768A1214";              // Flow history data characteristic
 constexpr char UUID_VELOCITY_DATA[] = "19B10011-E8F2-537E-4F6C-D104768A1214";     // Velocity history data characteristic
-constexpr char UUID_VERSION[] = "19B10041-F315-4F60-9FB8-838830549FD2";  // Standard Firmware Revision String
+constexpr char UUID_VERSION[] = "19B10041-E8F2-537E-4F6C-D104768A1214";  // Standard Firmware Revision String
 
 char device_name[32];
 constexpr const char *VERSION = "1.0.0";

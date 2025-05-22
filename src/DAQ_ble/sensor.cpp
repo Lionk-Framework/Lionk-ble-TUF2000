@@ -7,7 +7,7 @@ sensor_data_t sensor_data;
 static int i = 0;
 
 void updateSensorData()
-{
+{       
 	// Read flow rate
 	float flowValue = 0.0f;
 	if (readFlowValue(flowValue)) {
