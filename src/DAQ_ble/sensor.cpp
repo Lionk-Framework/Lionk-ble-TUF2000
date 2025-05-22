@@ -21,7 +21,6 @@ void updateSensorData()
 	} else {
 		DEBUG_PRINTLN("Failed to read flow from Modbus");
 	}
-	flowChar.writeValue(sensor_data.flow_rate);
 	
 	// Read velocity
 	float velocityValue = 0.0f;
@@ -37,7 +36,6 @@ void updateSensorData()
 		DEBUG_PRINTLN("Failed to read velocity from Modbus");
 		sensor_data.velocity = 0;
 	}
-	velocityChar.writeValue(sensor_data.velocity);
 	
 	// Read pipe diameter
 	float diameterValue = 0.0f;

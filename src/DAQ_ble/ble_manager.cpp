@@ -3,56 +3,48 @@
 #include "utils.h"
 #include <string.h>
 
-// UUIDs for services
-constexpr char UUID_FLOW_SVC[] = "181A";
-constexpr char UUID_VELOCITY_SVC[] = "181B";
-constexpr char UUID_PIPE_DIAMETER_SVC[] = "181C";
-constexpr char UUID_YEARLY_FLOW_SVC[] = "181D";
-constexpr char UUID_DATA_SVC[] = "19B10000-E8F2-537E-4F6C-D104768A1214";
-constexpr char UUID_VELOCITY_DATA_SVC[] = "19B10010-E8F2-537E-4F6C-D104768A1214";
-constexpr char UUID_VERSION_SVC[] = "180A";
+// Custom services using Lionk's base UUID: 8EC9XXXX-F315-4F60-9FB8-838830549FD2
+constexpr char UUID_PIPE_DIAMETER_SVC[] = "19B10030-E8F2-537E-4F6C-D104768A1214";  // Pipe diameter service
+constexpr char UUID_YEARLY_FLOW_SVC[] = "19B10020-E8F2-537E-4F6C-D104768A1214";    // Yearly flow service
+constexpr char UUID_FLOW_SVC[] = "19B10000-F315-4F60-9FB8-838830549FD2";           // Flow history data service
+constexpr char UUID_VELOCITY_DATA_SVC[] = "19B10010-E8F2-537E-4F6C-D104768A1214";  // Velocity history data service
+constexpr char UUID_VERSION_SVC[] = "19B10040-F315-4F60-9FB8-838830549FD2";  // Standard Device Information Service
 
-// UUIDs for characteristics
-constexpr char UUID_FLOW[] = "2A6D";
-constexpr char UUID_VELOCITY[] = "2A6E";
-constexpr char UUID_PIPE_DIAMETER[] = "2A6F";
-constexpr char UUID_YEARLY_FLOW[] = "2A70";
-constexpr char UUID_DATA[] = "19B10001-E8F2-537E-4F6C-D104768A1214";
-constexpr char UUID_VELOCITY_DATA[] = "19B10011-E8F2-537E-4F6C-D104768A1214";
-constexpr char UUID_VERSION[] = "2A28";
+// Custom characteristics
+constexpr char UUID_PIPE_DIAMETER[] = "19B10031-E8F2-537E-4F6C-D104768A1214";     // Pipe diameter characteristic 
+constexpr char UUID_YEARLY_FLOW[] = "19B10021-E8F2-537E-4F6C-D104768A1214";       // Yearly flow characteristic
+constexpr char UUID_FLOW_DATA[] = "19B10001-F315-4F60-9FB8-838830549FD2";              // Flow history data characteristic
+constexpr char UUID_VELOCITY_DATA[] = "19B10011-E8F2-537E-4F6C-D104768A1214";     // Velocity history data characteristic
+constexpr char UUID_VERSION[] = "19B10041-F315-4F60-9FB8-838830549FD2";  // Standard Firmware Revision String
 
 char device_name[32];
 constexpr const char *VERSION = "1.0.0";
 
 // Subscription flags
-bool subscribed = false;
-bool velocitySubscribed = false;
+bool flowHistorySubscribed = false;
+bool velocityHistorySubscribed = false;
 bool yearlyFlowSubscribed = false;
 bool pipeDiameterSubscribed = false;
 
-// Services and characteristics for flow rate
-BLEService flowService(UUID_FLOW_SVC);
-BLEUnsignedIntCharacteristic flowChar(UUID_FLOW, BLERead);
-BLEService dataService(UUID_DATA_SVC);
-BLECharacteristic dataChar(UUID_DATA, BLENotify, PAYLOAD_SIZE);
+// Flow history service and characteristic
+BLEService flowHistoryService(UUID_FLOW_SVC);                          // Flow history data service
+BLECharacteristic flowHistoryChar(UUID_FLOW_DATA, BLENotify, PAYLOAD_SIZE); // Flow history data characteristic (last 50 values)
 
-// Services and characteristics for velocity
-BLEService velocityService(UUID_VELOCITY_SVC);
-BLEUnsignedIntCharacteristic velocityChar(UUID_VELOCITY, BLERead);
-BLEService velocityDataService(UUID_VELOCITY_DATA_SVC);
-BLECharacteristic velocityDataChar(UUID_VELOCITY_DATA, BLENotify, PAYLOAD_SIZE);
+// Velocity history service and characteristic
+BLEService velocityHistoryService(UUID_VELOCITY_DATA_SVC);                 // Velocity history data service
+BLECharacteristic velocityHistoryChar(UUID_VELOCITY_DATA, BLENotify, PAYLOAD_SIZE); // Velocity history data characteristic (last 50 values)
 
-// Services and characteristics for pipe diameter
+// Pipe diameter service and characteristic (read/write)
 BLEService pipeDiameterService(UUID_PIPE_DIAMETER_SVC);
 BLEUnsignedIntCharacteristic pipeDiameterChar(UUID_PIPE_DIAMETER, BLERead | BLEWrite);
 
-// Services and characteristics for yearly flow
+// Yearly flow service and characteristic
 BLEService yearlyFlowService(UUID_YEARLY_FLOW_SVC);
-BLEUnsignedLongCharacteristic yearlyFlowChar(UUID_YEARLY_FLOW, BLERead);
+BLECharacteristic yearlyFlowChar(UUID_YEARLY_FLOW, BLENotify, 5);
 
-// Service for version
-BLEService versionService(UUID_VERSION_SVC);
-BLEStringCharacteristic versionChar(UUID_VERSION, BLERead, 20);
+// Device information service - Version
+BLEService versionService(UUID_VERSION_SVC);                    // Device Information Service (0x180A)
+BLEStringCharacteristic versionChar(UUID_VERSION, BLERead, 20); // Firmware Revision String (0x2A28)
 
 void startAdvertising()
 {
@@ -75,33 +67,27 @@ void bleSetup()
 	BLE.setLocalName(device_name);
 	
 	// Configure main service for advertising
-	BLE.setAdvertisedService(dataService);
+	BLE.setAdvertisedService(flowHistoryService);
 	
-	// Configure services and characteristics for flow rate
-	flowService.addCharacteristic(flowChar);
-	dataService.addCharacteristic(dataChar);
-	BLE.addService(flowService);
-	BLE.addService(dataService);
-	flowChar.writeValue(sensor_data.flow_rate);
-	dataChar.setEventHandler(BLESubscribed, onSubscribe);
-	dataChar.setEventHandler(BLEUnsubscribed, onUnsubscribe);
+	// Configure service and characteristic for flow history (last 50 values)
+	flowHistoryService.addCharacteristic(flowHistoryChar);
+	BLE.addService(flowHistoryService);
+	flowHistoryChar.setEventHandler(BLESubscribed, onFlowHistorySubscribe);
+	flowHistoryChar.setEventHandler(BLEUnsubscribed, onFlowHistoryUnsubscribe);
 	
-	// Configure services and characteristics for velocity
-	velocityService.addCharacteristic(velocityChar);
-	velocityDataService.addCharacteristic(velocityDataChar);
-	BLE.addService(velocityService);
-	BLE.addService(velocityDataService);
-	velocityChar.writeValue(sensor_data.velocity);
-	velocityDataChar.setEventHandler(BLESubscribed, 
+	// Configure service and characteristic for velocity history (last 50 values)
+	velocityHistoryService.addCharacteristic(velocityHistoryChar);
+	BLE.addService(velocityHistoryService);
+	velocityHistoryChar.setEventHandler(BLESubscribed, 
 		[](BLEDevice central, BLECharacteristic ch) {
-			velocitySubscribed = true;
-			DEBUG_PRINT("Velocity notifications enabled by central: ");
+			velocityHistorySubscribed = true;
+			DEBUG_PRINT("Velocity history notifications enabled by central: ");
 			DEBUG_PRINTLN(central.address());
 		});
-	velocityDataChar.setEventHandler(BLEUnsubscribed, 
+	velocityHistoryChar.setEventHandler(BLEUnsubscribed, 
 		[](BLEDevice central, BLECharacteristic ch) {
-			velocitySubscribed = false;
-			DEBUG_PRINTLN("Velocity notifications disabled");
+			velocityHistorySubscribed = false;
+			DEBUG_PRINTLN("Velocity history notifications disabled");
 		});
 	
 	// Configure services and characteristics for pipe diameter
@@ -150,22 +136,22 @@ void bleSetup()
 	DEBUG_PRINTLN(device_name);
 }
 
-void onSubscribe(BLEDevice central, BLECharacteristic characteristic)
+void onFlowHistorySubscribe(BLEDevice central, BLECharacteristic characteristic)
 {
-	subscribed = true;
-	DEBUG_PRINT("Notifications enabled by central: ");
+	flowHistorySubscribed = true;
+	DEBUG_PRINT("Flow history notifications enabled by central: ");
 	DEBUG_PRINTLN(central.address());
 }
 
-void onUnsubscribe(BLEDevice central, BLECharacteristic characteristic)
+void onFlowHistoryUnsubscribe(BLEDevice central, BLECharacteristic characteristic)
 {
-	subscribed = false;
-	DEBUG_PRINTLN("Notifications disabled");
+	flowHistorySubscribed = false;
+	DEBUG_PRINTLN("Flow history notifications disabled");
 }
 
-bool bleSendDataBuffer(const uint16_t *samples, int length)
+bool bleSendFlowHistoryBuffer(const uint16_t *samples, int length)
 {
-	if (!subscribed)
+	if (!flowHistorySubscribed)
 		return false;
 	// Build a payload: [version][count][samples...]
 	uint8_t payload[PAYLOAD_SIZE];
@@ -176,12 +162,12 @@ bool bleSendDataBuffer(const uint16_t *samples, int length)
 							 0xFF;
 		payload[HEADER_SIZE + i * SAMPLE_SIZE + 1] = samples[i] & 0xFF;
 	}
-	return dataChar.writeValue(payload, HEADER_SIZE + length * SAMPLE_SIZE);
+	return flowHistoryChar.writeValue(payload, HEADER_SIZE + length * SAMPLE_SIZE);
 }
 
-bool bleSendVelocityBuffer(const uint16_t *samples, int length)
+bool bleSendVelocityHistoryBuffer(const uint16_t *samples, int length)
 {
-	if (!velocitySubscribed)
+	if (!velocityHistorySubscribed)
 		return false;
 	
 	// Build a payload: [version][count][samples...]
@@ -193,7 +179,7 @@ bool bleSendVelocityBuffer(const uint16_t *samples, int length)
 							 0xFF;
 		payload[HEADER_SIZE + i * SAMPLE_SIZE + 1] = samples[i] & 0xFF;
 	}
-	return velocityDataChar.writeValue(payload, HEADER_SIZE + length * SAMPLE_SIZE);
+	return velocityHistoryChar.writeValue(payload, HEADER_SIZE + length * SAMPLE_SIZE);
 }
 
 bool bleSendYearlyFlow()
@@ -201,7 +187,13 @@ bool bleSendYearlyFlow()
 	if (!yearlyFlowSubscribed)
 		return false;
 	
-	return yearlyFlowChar.writeValue(sensor_data.yearly_flow);
+        uint8_t payload[5];
+        payload[0] = PAYLOAD_VERSION;
+        payload[1] = sensor_data.yearly_flow >> 24;
+        payload[2] = (sensor_data.yearly_flow >> 16) & 0xFF;
+        payload[3] = (sensor_data.yearly_flow >> 8) & 0xFF;
+        payload[4] = sensor_data.yearly_flow & 0xFF;
+	return yearlyFlowChar.writeValue(payload, 5);
 }
 
 bool bleSendPipeDiameter()

@@ -6,33 +6,30 @@
 
 void bleSetup();
 void startAdvertising();
-void onSubscribe(BLEDevice central, BLECharacteristic characteristic);
-void onUnsubscribe(BLEDevice central, BLECharacteristic characteristic);
+void onFlowHistorySubscribe(BLEDevice central, BLECharacteristic characteristic);
+void onFlowHistoryUnsubscribe(BLEDevice central, BLECharacteristic characteristic);
 void onPipeDiameterWritten(BLEDevice central, BLECharacteristic characteristic);
-bool bleSendDataBuffer(const uint16_t *buffer, int length);
-bool bleSendVelocityBuffer(const uint16_t *buffer, int length);
+bool bleSendFlowHistoryBuffer(const uint16_t *buffer, int length);
+bool bleSendVelocityHistoryBuffer(const uint16_t *buffer, int length);
 bool bleSendYearlyFlow();
 bool bleSendPipeDiameter();
 
-// Flags de souscription pour chaque service
-extern bool subscribed;
-extern bool velocitySubscribed;
+// Subscription flags for each service
+extern bool flowHistorySubscribed;
+extern bool velocityHistorySubscribed;
 extern bool yearlyFlowSubscribed;
 extern bool pipeDiameterSubscribed;
 
-// Services et caractéristiques BLE
-extern BLEService flowService;
-extern BLEUnsignedIntCharacteristic flowChar;
-extern BLEService velocityService;
-extern BLEUnsignedIntCharacteristic velocityChar;
+// BLE Services and Characteristics
+// Pipe diameter service and characteristic (read/write)
 extern BLEService pipeDiameterService;
 extern BLEUnsignedIntCharacteristic pipeDiameterChar;
+
+// Yearly flow service and characteristic
 extern BLEService yearlyFlowService;
-extern BLEUnsignedLongCharacteristic yearlyFlowChar;
-extern BLEService dataService;
-extern BLECharacteristic dataChar;
-extern BLEService velocityDataService;
-extern BLECharacteristic velocityDataChar;
+extern BLECharacteristic yearlyFlowChar;
+
+// Version information
 extern BLEService versionService;
 extern BLEStringCharacteristic versionChar;
 

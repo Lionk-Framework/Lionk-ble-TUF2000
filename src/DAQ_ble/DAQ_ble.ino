@@ -19,7 +19,6 @@ void setup()
 	if (DEBUG_MODE) {
 		Serial.begin(9600);
 	}
-	pinMode(A0, INPUT); // TODO: Manage correctly
 	sensor_data.flow_rate = 0;
 	bleSetup();
 	modbusSetup();
@@ -36,8 +35,8 @@ void handleCentralConnection(BLEDevice &central)
 	}
 	DEBUG_PRINT("Disconnected from central: ");
 	DEBUG_PRINTLN(central.address());
-	subscribed = false;
-	velocitySubscribed = false;
+	flowHistorySubscribed = false;
+	velocityHistorySubscribed = false;
 	yearlyFlowSubscribed = false;
 	pipeDiameterSubscribed = false;
 	startAdvertising();
@@ -63,8 +62,8 @@ void handleSensorUpdate()
 		
 		// Check if buffers are full
 		if (flowBufferIndex >= SAMPLES_PER_PACKET) {
-			if (subscribed) {
-				if (bleSendDataBuffer(flowRateBuffer, SAMPLES_PER_PACKET)) {
+			if (flowHistorySubscribed) {
+				if (bleSendFlowHistoryBuffer(flowRateBuffer, SAMPLES_PER_PACKET)) {
 					DEBUG_PRINTLN("Flow rate buffer sent successfully");
 				} else {
 					DEBUG_PRINTLN("Failed to send flow rate buffer");
@@ -74,8 +73,8 @@ void handleSensorUpdate()
 		}
 		
 		if (velocityBufferIndex >= SAMPLES_PER_PACKET) {
-			if (velocitySubscribed) {
-				if (bleSendVelocityBuffer(velocityBuffer, SAMPLES_PER_PACKET)) {
+			if (velocityHistorySubscribed) {
+				if (bleSendVelocityHistoryBuffer(velocityBuffer, SAMPLES_PER_PACKET)) {
 					DEBUG_PRINTLN("Velocity buffer sent successfully");
 				} else {
 					DEBUG_PRINTLN("Failed to send velocity buffer");
