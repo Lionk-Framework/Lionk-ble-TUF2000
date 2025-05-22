@@ -7,10 +7,10 @@ sensor_data_t sensor_data;
 static int i = 0;
 
 void updateSensorData()
-{       
+{   
 	// Read flow rate
 	float flowValue = 0.0f;
-	if (readFlowValue(flowValue)) {
+	if (flowHistorySubscribed && readFlowValue(flowValue)) {
 		sensor_data.flow_rate = static_cast<uint16_t>(flowValue * 100);
 		DEBUG_PRINT("Flow rate (Modbus): ");
 		DEBUG_PRINT(sensor_data.flow_rate);
@@ -24,7 +24,7 @@ void updateSensorData()
 	
 	// Read velocity
 	float velocityValue = 0.0f;
-	if (readVelocityValue(velocityValue)) {
+	if (velocityHistorySubscribed && readVelocityValue(velocityValue)) {
 		sensor_data.velocity = static_cast<uint16_t>(velocityValue * 100);
 		DEBUG_PRINT("Velocity (Modbus): ");
 		DEBUG_PRINT(sensor_data.velocity);
@@ -39,8 +39,13 @@ void updateSensorData()
 	
 	// Read pipe diameter
 	float diameterValue = 0.0f;
-	if (readInnerPipeDiameter(diameterValue)) {
+    float oldDiameterValue = sensor_data.pipe_diameter;
+	if (pipeDiameterSubscribed && readInnerPipeDiameter(diameterValue)) {
 		sensor_data.pipe_diameter = static_cast<uint16_t>(diameterValue * 100);
+        if(sensor_data.pipe_diameter != 0 && oldDiameterValue != diameterValue){
+	        pipeDiameterChar.writeValue(sensor_data.pipe_diameter);
+        }
+        
 		DEBUG_PRINT("Pipe diameter (Modbus): ");
 		DEBUG_PRINT(sensor_data.pipe_diameter);
 		DEBUG_PRINTLN(" (raw value)");
@@ -51,14 +56,14 @@ void updateSensorData()
 		DEBUG_PRINTLN("Failed to read pipe diameter from Modbus");
 		sensor_data.pipe_diameter = 0;
 	}
-	pipeDiameterChar.writeValue(sensor_data.pipe_diameter);
 }
 
 void updateYearlyFlowData()
 {
 	// Read yearly flow
 	uint32_t yearlyFlowValue = 0;
-	if (readYearlyFlow(yearlyFlowValue)) {
+
+	if (yearlyFlowSubscribed && readYearlyFlow(yearlyFlowValue)) {
 		sensor_data.yearly_flow = yearlyFlowValue;
 		DEBUG_PRINT("Yearly Flow (Modbus): ");
 		DEBUG_PRINT(sensor_data.yearly_flow);

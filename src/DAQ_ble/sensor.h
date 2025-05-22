@@ -8,11 +8,11 @@
 #define PAYLOAD_VERSION	   0
 #define HEADER_SIZE	   2
 #define SAMPLE_SIZE	   2
-#define SAMPLES_PER_PACKET 50
+#define SAMPLES_PER_PACKET 10
 #define PAYLOAD_SIZE	   (HEADER_SIZE + SAMPLES_PER_PACKET * SAMPLE_SIZE)
 
 // Update periods
-#define FLOW_VELOCITY_UPDATE_INTERVAL 20    // 20ms (50 samples/second)
+#define FLOW_VELOCITY_UPDATE_INTERVAL 100    // 20ms (50 samples/second)
 #define YEARLY_FLOW_UPDATE_INTERVAL   10000 // 10 seconds
 // -------------------------------------------
 

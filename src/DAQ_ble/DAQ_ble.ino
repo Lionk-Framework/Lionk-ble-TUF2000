@@ -30,7 +30,13 @@ void handleCentralConnection(BLEDevice &central)
 	DEBUG_PRINT("Connected to central: ");
 	DEBUG_PRINTLN(central.address());
 	while (central.connected()) {
-		handleSensorUpdate();
+        if (yearlyFlowSubscribed ||
+            pipeDiameterSubscribed ||
+            flowHistorySubscribed ||
+            velocityHistorySubscribed) {
+                DEBUG_PRINT("Subscribed baby");
+                handleSensorUpdate();
+        }
 		delay(sampleInterval / 2);
 	}
 	DEBUG_PRINT("Disconnected from central: ");
@@ -49,7 +55,7 @@ void handleSensorUpdate()
 	// Update flow rate and velocity (every 20ms)
 	if (currentTime - lastFlowVelocityUpdateTime >= sampleInterval) {
 		lastFlowVelocityUpdateTime = currentTime;
-		
+
 		// Read sensor data via Modbus
 		updateSensorData();
 		
